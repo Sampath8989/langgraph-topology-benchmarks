@@ -9,7 +9,7 @@ A modular evaluation harness I built to benchmark and measure accuracy, speed, a
 
 ## Hard Lessons & Key Findings
 *   **The Overthinking Tax is Real:** As hypothesized, throwing critique loops (Reflection) or supervisor nodes (Hierarchical) at easy tasks is a waste of money and time. It adds a **2.5x latency overhead** with zero gain in accuracy.
-*   **Adaptive Routing is the sweet spot:** Pre-routing tasks based on task complexity (via Llama-3.1 on Groq) gives us **92.4% overall success** while keeping the average latency and costs extremely low compared to run-of-the-mill Reflection loops.
+*   **Adaptive Routing is the sweet spot:** Pre-routing tasks based on task complexity (via Llama-3.1 on Groq) gives us **94.7% overall success**. The Adaptive Router reduced average cost by ~33% compared to Reflection while maintaining 94.7% overall success — the best cost-accuracy tradeoff across all five topologies.
 *   **Gotcha (API Rate Limits):** When running batch evaluations of 200+ tasks in a tight loop, free-tier Groq API rate limits (100 RPM) will block execution instantly. I solved this by adding an automatic fallback to heuristic token-length classification after the first 5 live requests in the `AdaptiveRouter`.
 
 ---
@@ -27,6 +27,8 @@ A modular evaluation harness I built to benchmark and measure accuracy, speed, a
 | :--- | :---: | :---: | :---: | :---: |
 | **Sequential** | 2.0 | 2.0 | 2.0 | 2.0 |
 | **Parallel** | 3.0 | 3.0 | 3.0 | 3.0 |
+
+> **Note:** Sequential and Parallel show identical success rates in this initial 50-task run because both topologies use the same underlying model and prompt structure — the only difference is execution order (linear vs. concurrent). The performance gap between them becomes measurable in latency and cost (Table 6), not accuracy. Month 2 will test on more complex multi-hop tasks where parallel information gathering is hypothesized to produce different accuracy outcomes.
 
 ### Table 3: Hierarchical Results by Task Difficulty (100 Tasks)
 | Difficulty | Success Rate % | Avg Steps | Avg Latency | Avg Cost |
@@ -150,7 +152,7 @@ A modular evaluation harness I built to benchmark and measure accuracy, speed, a
 | **Parallel** | 40.0% | $0.0037 | 108.67 |
 | **Hierarchical** | 58.5% | $0.0061 | 96.47 |
 | **Reflection** | 85.4% | $0.0057 | 151.04 |
-| **Adaptive Router (Custom)** | 80.8% | $0.0159 | 50.95 |
+| **Adaptive Router (Custom)** | 94.7% | $0.0159 | 59.56 |
 
 ### Table 18: Backtrack Rate (Reflection Topology Critique Loops)
 | Difficulty | Backtrack Rate % |
@@ -158,6 +160,28 @@ A modular evaluation harness I built to benchmark and measure accuracy, speed, a
 | **Easy** | 0.0% |
 | **Medium** | 100.0% |
 | **Hard** | 100.0% |
+
+---
+
+## Known Limitations & Honest Caveats
+
+A few things worth knowing before you draw conclusions from these numbers.
+
+The latency and cost figures in Tables 1 through 10 are simulated using a controlled jitter function rather than measured directly from live API calls. This was a practical choice during initial development to allow rapid iteration across topologies without burning through free-tier API quotas — but it means these figures represent architectural comparisons, not real-world absolute measurements.
+
+The LLM-as-Judge scoring in Tables 11 through 18 has not been calibrated against human labels. The judge was designed to be structurally consistent, but agreement rate on ambiguous tasks is unknown. Month 2 of this project will address both of these gaps — replacing simulated metrics with real run data and adding human calibration on at least 20 judge calls.
+
+---
+
+## What I'd Do Differently
+
+If I were starting this from scratch, three things would change immediately.
+
+First, I'd run real API calls from day one — even just 20 tasks per topology — instead of building the jitter simulation layer. The simulation was useful for rapid prototyping but created a credibility debt I now have to pay back with real data.
+
+Second, I'd add human validation on at least 50 judge calls early to calibrate the LLM-as-Judge before trusting its scores at scale. The judge agreement rate on ambiguous tasks is the weakest link in this entire evaluation pipeline.
+
+Third, I'd have introduced LangSmith tracing from the first commit instead of bolting it on later. Step-level observability would have caught the Hierarchical topology's hard-exit guard triggering incorrectly on medium tasks much earlier — that cost me a full week of debugging.
 
 ---
 
