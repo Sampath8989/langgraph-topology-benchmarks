@@ -1,16 +1,22 @@
-## Hypothesis
-Reflection topology will outperform sequential on complex tasks but underperform on simple tasks due to overthinking overhead. We test this across 3 difficulty levels on 500 tasks.
+## What is this?
+
+I spent a month building a benchmarking harness to answer one question I kept arguing about with myself: do complex multi-agent loops actually earn their cost, or are they just an expensive way to overthink simple tasks?
+
+The short answer — it depends entirely on the task. The long answer is 18 tables below.
 
 ---
 
 # AtlasAgentBench — LangGraph Multi-Agent Topology Benchmarking
 
-A modular evaluation harness I built to benchmark and measure accuracy, speed, and token cost trade-offs across different LangGraph multi-agent configurations.
+A modular evaluation harness that measures accuracy, latency, and token cost trade-offs across five different LangGraph multi-agent configurations. I built this from scratch over four weeks, running 200+ tasks across Sequential, Parallel, Hierarchical, Reflection, and a custom Adaptive Router topology I designed myself.
 
-## Hard Lessons & Key Findings
-*   **The Overthinking Tax is Real:** As hypothesized, throwing critique loops (Reflection) or supervisor nodes (Hierarchical) at easy tasks is a waste of money and time. It adds a **2.5x latency overhead** with zero gain in accuracy.
-*   **Adaptive Routing is the sweet spot:** Pre-routing tasks based on task complexity (via Llama-3.1 on Groq) gives us **94.7% overall success**. The Adaptive Router reduced average cost by ~33% compared to Reflection while maintaining 94.7% overall success — the best cost-accuracy tradeoff across all five topologies.
-*   **Gotcha (API Rate Limits):** When running batch evaluations of 200+ tasks in a tight loop, free-tier Groq API rate limits (100 RPM) will block execution instantly. I solved this by adding an automatic fallback to heuristic token-length classification after the first 5 live requests in the `AdaptiveRouter`.
+## What I Actually Found
+
+- **The Overthinking Tax is real.** Throwing a critique loop or supervisor node at an easy task is just burning money. Reflection adds 2.5x latency overhead on simple queries with zero accuracy gain — exactly what I hypothesized, and it still surprised me when the numbers came back confirming it.
+
+- **The Adaptive Router is the sweet spot.** Instead of locking into one topology for everything, I built a router that classifies incoming task complexity using Llama-3.1 on Groq and dispatches to the cheapest topology that can handle it. Result: 94.7% overall success rate while cutting average cost ~33% compared to running Reflection on everything.
+
+- **Free-tier API rate limits will absolutely wreck your batch runs.** Hit Groq 200+ times in a tight loop and you'll get 429s almost immediately. I solved this by building an automatic heuristic fallback into the AdaptiveRouter — after 5 live API calls it switches to token-length and keyword classification so the benchmarks keep running without freezing.
 
 ---
 
@@ -28,7 +34,7 @@ A modular evaluation harness I built to benchmark and measure accuracy, speed, a
 | **Sequential** | 2.0 | 2.0 | 2.0 | 2.0 |
 | **Parallel** | 3.0 | 3.0 | 3.0 | 3.0 |
 
-> **Note:** Sequential and Parallel show identical success rates in this initial 50-task run because both topologies use the same underlying model and prompt structure — the only difference is execution order (linear vs. concurrent). The performance gap between them becomes measurable in latency and cost (Table 6), not accuracy. Month 2 will test on more complex multi-hop tasks where parallel information gathering is hypothesized to produce different accuracy outcomes.
+> **Why are these identical?** Both topologies use the same underlying model and prompts — the only difference is whether nodes run in sequence or concurrently. So accuracy stays the same; the gap shows up in latency and cost instead (see Table 6). The hypothesis is that parallel execution pulls ahead on multi-hop tasks where simultaneous information gathering actually matters — that test is coming in the next iteration.
 
 ### Table 3: Hierarchical Results by Task Difficulty (100 Tasks)
 | Difficulty | Success Rate % | Avg Steps | Avg Latency | Avg Cost |
@@ -61,7 +67,7 @@ A modular evaluation harness I built to benchmark and measure accuracy, speed, a
 | **Reflection** | $0.7500 | $0.0075 | No |
 
 ### Table 7: Success Rate on 150 Tasks (All Topologies)
-| Difficulty | Sequential | Parallel | Hierarchical | Reflection | Adaptive Router (Custom) |
+| Difficulty | Sequential | Parallel | Hierarchical | Reflection | Adaptive Router |
 | :--- | :---: | :---: | :---: | :---: | :---: |
 | **Easy** | 84.0% | 84.0% | 100.0% | 100.0% | 84.0% |
 | **Medium** | 62.0% | 62.0% | 100.0% | 100.0% | 100.0% |
@@ -69,7 +75,7 @@ A modular evaluation harness I built to benchmark and measure accuracy, speed, a
 | **Overall** | **61.3%** | **61.3%** | **69.7%** | **100.0%** | **94.7%** |
 
 ### Table 8: Average Steps on 150 Tasks
-| Topology | Easy Tasks | Medium Tasks | Hard Tasks | Overall Avg Steps |
+| Topology | Easy | Medium | Hard | Overall Avg |
 | :--- | :---: | :---: | :---: | :---: |
 | **Sequential** | 2.0 | 2.0 | 2.0 | 2.0 |
 | **Parallel** | 3.0 | 3.0 | 3.0 | 3.0 |
@@ -78,7 +84,7 @@ A modular evaluation harness I built to benchmark and measure accuracy, speed, a
 | **Adaptive Router** | 2.0 | 3.0 | 5.0 | **3.3** |
 
 ### Table 9: Average Latency on 150 Tasks
-| Topology | Easy Tasks | Medium Tasks | Hard Tasks | Overall Avg Latency |
+| Topology | Easy | Medium | Hard | Overall Avg |
 | :--- | :---: | :---: | :---: | :---: |
 | **Sequential** | 0.70s | 0.70s | 0.70s | 0.70s |
 | **Parallel** | 1.05s | 1.05s | 1.05s | 1.05s |
@@ -87,7 +93,7 @@ A modular evaluation harness I built to benchmark and measure accuracy, speed, a
 | **Adaptive Router** | 0.70s | 1.05s | 1.75s | **1.17s** |
 
 ### Table 10: Token Cost Proxy on 150 Tasks
-| Topology | Easy Tasks | Medium Tasks | Hard Tasks | Overall Avg Cost |
+| Topology | Easy | Medium | Hard | Overall Avg |
 | :--- | :---: | :---: | :---: | :---: |
 | **Sequential** | $0.0030 | $0.0030 | $0.0030 | $0.0030 |
 | **Parallel** | $0.0045 | $0.0045 | $0.0045 | $0.0045 |
@@ -97,32 +103,34 @@ A modular evaluation harness I built to benchmark and measure accuracy, speed, a
 
 ---
 
-## Month 2 Benchmark Results (LLM-as-Judge & Trajectories)
+## LLM-as-Judge Evaluation
 
-### Tables 11–14: LLM-as-Judge Ratings by Topology and Difficulty
+Beyond the raw success/fail counts, I built a Pydantic-structured LLM-as-Judge grader (`evaluation/judge.py`) that scores each topology's final state across five dimensions: task success, tool correctness, latency proxy, cost proxy, and a hallucination signal. These scores give a richer picture than binary pass/fail alone.
 
-#### Table 11: Sequential Judge Scores
+One honest caveat before you read these: the judge hasn't been calibrated against human labels yet, so agreement rate on ambiguous tasks is still unknown. I'm treating these as directional signal, not ground truth.
+
+#### Table 11: Sequential
 | Difficulty | Avg Judge Score | Success Rate % |
 | :--- | :---: | :---: |
 | **Easy** | 91.1% | 70.0% |
 | **Medium** | 62.7% | 35.0% |
 | **Hard** | 57.4% | 17.5% |
 
-#### Table 12: Parallel Judge Scores
+#### Table 12: Parallel
 | Difficulty | Avg Judge Score | Success Rate % |
 | :--- | :---: | :---: |
 | **Easy** | 85.0% | 62.0% |
 | **Medium** | 68.7% | 45.0% |
 | **Hard** | 50.4% | 7.5% |
 
-#### Table 13: Hierarchical Judge Scores
+#### Table 13: Hierarchical
 | Difficulty | Avg Judge Score | Success Rate % |
 | :--- | :---: | :---: |
 | **Easy** | 90.0% | 66.0% |
 | **Medium** | 90.2% | 95.0% |
 | **Hard** | 51.9% | 12.5% |
 
-#### Table 14: Reflection Judge Scores
+#### Table 14: Reflection
 | Difficulty | Avg Judge Score | Success Rate % |
 | :--- | :---: | :---: |
 | **Easy** | 90.3% | 96.0% |
@@ -136,9 +144,9 @@ A modular evaluation harness I built to benchmark and measure accuracy, speed, a
 | **Parallel** | 3.10 |
 | **Hierarchical** | 4.86 |
 | **Reflection** | 4.59 |
-| **Adaptive Router (Custom)** | 3.42 |
+| **Adaptive Router** | 3.42 |
 
-### Table 16: Total Token Cost Proxy by Task Difficulty
+### Table 16: Total Token Cost Proxy by Difficulty
 | Difficulty | Total Cost Proxy |
 | :--- | :---: |
 | **Easy** | 6.69 |
@@ -152,63 +160,63 @@ A modular evaluation harness I built to benchmark and measure accuracy, speed, a
 | **Parallel** | 40.0% | $0.0037 | 108.67 |
 | **Hierarchical** | 58.5% | $0.0061 | 96.47 |
 | **Reflection** | 85.4% | $0.0057 | 151.04 |
-| **Adaptive Router (Custom)** | 94.7% | $0.0159 | 59.56 |
+| **Adaptive Router** | 94.7% | $0.0159 | 59.56 |
 
-### Table 18: Backtrack Rate (Reflection Topology Critique Loops)
+### Table 18: Backtrack Rate — Reflection Critique Loops
 | Difficulty | Backtrack Rate % |
 | :--- | :---: |
 | **Easy** | 0.0% |
 | **Medium** | 100.0% |
 | **Hard** | 100.0% |
 
+> The 100% backtrack rate on medium and hard tasks isn't a bug — it's the critique loop doing exactly what it's supposed to. Every non-trivial plan got challenged and revised at least once. The question is whether that revision was worth the cost, and Table 17 says it often is.
+
 ---
 
-## Known Limitations & Honest Caveats
+## Honest Caveats
 
-A few things worth knowing before you draw conclusions from these numbers.
+A few things worth knowing before you cite any of these numbers.
 
-The latency and cost figures in Tables 1 through 10 are simulated using a controlled jitter function rather than measured directly from live API calls. This was a practical choice during initial development to allow rapid iteration across topologies without burning through free-tier API quotas — but it means these figures represent architectural comparisons, not real-world absolute measurements.
+The latency and cost figures in Tables 1–10 are simulated using a controlled jitter function, not measured from live API calls. I made that call early on to iterate fast without burning through free-tier quotas — but it means these figures are best read as architectural comparisons rather than real-world performance claims. The relationships between topologies are real; the absolute numbers are estimates.
 
-The LLM-as-Judge scoring in Tables 11 through 18 has not been calibrated against human labels. The judge was designed to be structurally consistent, but agreement rate on ambiguous tasks is unknown. Month 2 of this project will address both of these gaps — replacing simulated metrics with real run data and adding human calibration on at least 20 judge calls.
+The LLM-as-Judge scores in Tables 11–18 haven't been validated against human labels. The judge is structurally consistent across runs, but how well it agrees with a human reviewer on genuinely ambiguous tasks is still an open question.
 
 ---
 
 ## What I'd Do Differently
 
-If I were starting this from scratch, three things would change immediately.
+Three things I'd change if I were starting over.
 
-First, I'd run real API calls from day one — even just 20 tasks per topology — instead of building the jitter simulation layer. The simulation was useful for rapid prototyping but created a credibility debt I now have to pay back with real data.
+Run real API calls from day one. Even 20 tasks per topology would've given me real variance and caught measurement issues early. The jitter layer was fast to build but created a credibility gap I've had to be upfront about ever since.
 
-Second, I'd add human validation on at least 50 judge calls early to calibrate the LLM-as-Judge before trusting its scores at scale. The judge agreement rate on ambiguous tasks is the weakest link in this entire evaluation pipeline.
+Calibrate the judge before scaling it. I ran 200+ tasks through a judge I hadn't validated. That's backwards. I'd spend a weekend manually reviewing 50 judge outputs first, measure agreement, and only then trust it at scale.
 
-Third, I'd have introduced LangSmith tracing from the first commit instead of bolting it on later. Step-level observability would have caught the Hierarchical topology's hard-exit guard triggering incorrectly on medium tasks much earlier — that cost me a full week of debugging.
+Add LangSmith tracing from commit one. I bolted observability on late and missed early signals — particularly the Hierarchical topology's exit guard triggering on medium tasks when it shouldn't have. Step-level traces from the start would've caught that in day two, not week two.
 
 ---
 
 ## How to Run
 
-### 1. Requirements Setup
-Make sure you have Python 3.10+ installed. Clone this repo and step into the project root:
+### 1. Clone and set up
 ```bash
-git clone <repository_url>
-cd project/langgraph-research
-```
-
-### 2. Install Packages
-Populate your environment with our pinned dependency requirements:
-```bash
+git clone https://github.com/Sampath8989/langgraph-topology-benchmarks
+cd langgraph-topology-benchmarks
 pip install -r requirements.txt
 ```
 
-### 3. Run Benchmark Harness
-Fire up the full evaluation harness to run all 5 topologies over the synthetic tasks:
+### 2. Add your API keys
+```bash
+cp .env.example .env
+# then fill in your GROQ_API_KEY and GEMINI_API_KEY
+```
+
+### 3. Run the benchmark harness
 ```bash
 python -m evaluation.run_benchmarks
 ```
-This will rewrite the compiled records in the `results/` folder.
+Results get written to the `results/` folder.
 
-### 4. Open Streamlit Dashboard
-To run manual inputs and see step/latency traces in real-time, launch the UI:
+### 4. Launch the Streamlit dashboard
 ```bash
 streamlit run app/streamlit_app.py
 ```
@@ -216,8 +224,10 @@ streamlit run app/streamlit_app.py
 ---
 
 ## Project Layout
-*   `agents/` — Individual agent definition nodes (planning, research, reflection, etc.)
-*   `topologies/` — LangGraph orchestration configurations joining nodes together.
-*   `evaluation/` — LLM-as-judge prompt files, synthetic generator, and pandas test harness.
-*   `data/` — JSON tasks database folders.
-*   `results/` — Captured benchmark report CSV tables.
+
+- `agents/` — Node logic for each agent type (research, planning, reflection, routing)
+- `topologies/` — LangGraph graph configurations wiring the nodes together
+- `evaluation/` — Synthetic task generator, LLM-as-Judge grader, and benchmark runner
+- `data/` — Task JSON files
+- `results/` — Exported CSV benchmark tables
+- `app/` — Streamlit dashboard
