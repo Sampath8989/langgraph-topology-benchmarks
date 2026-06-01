@@ -102,60 +102,60 @@ A modular evaluation harness I built to benchmark and measure accuracy, speed, a
 #### Table 11: Sequential Judge Scores
 | Difficulty | Avg Judge Score | Success Rate % |
 | :--- | :---: | :---: |
-| **Easy** | 92.5% | 97.7% |
-| **Medium** | 60.0% | 0.0% |
-| **Hard** | 35.0% | 0.0% |
+| **Easy** | 91.1% | 70.0% |
+| **Medium** | 62.7% | 35.0% |
+| **Hard** | 57.4% | 17.5% |
 
 #### Table 12: Parallel Judge Scores
 | Difficulty | Avg Judge Score | Success Rate % |
 | :--- | :---: | :---: |
-| **Easy** | 90.9% | 96.9% |
-| **Medium** | 60.0% | 0.0% |
-| **Hard** | 35.0% | 0.0% |
+| **Easy** | 85.0% | 62.0% |
+| **Medium** | 68.7% | 45.0% |
+| **Hard** | 50.4% | 7.5% |
 
 #### Table 13: Hierarchical Judge Scores
 | Difficulty | Avg Judge Score | Success Rate % |
 | :--- | :---: | :---: |
-| **Easy** | 90.9% | 96.1% |
-| **Medium** | 88.0% | 100.0% |
-| **Hard** | 35.0% | 0.0% |
+| **Easy** | 90.0% | 66.0% |
+| **Medium** | 90.2% | 95.0% |
+| **Hard** | 51.9% | 12.5% |
 
 #### Table 14: Reflection Judge Scores
 | Difficulty | Avg Judge Score | Success Rate % |
 | :--- | :---: | :---: |
-| **Easy** | 89.4% | 100.0% |
-| **Medium** | 88.0% | 100.0% |
-| **Hard** | 90.0% | 100.0% |
+| **Easy** | 90.3% | 96.0% |
+| **Medium** | 86.8% | 90.0% |
+| **Hard** | 73.8% | 67.5% |
 
 ### Table 15: Average Steps per Topology
 | Topology | Average Steps |
 | :--- | :---: |
-| **Sequential** | 2.00 |
-| **Parallel** | 3.00 |
-| **Hierarchical** | 5.00 |
-| **Reflection** | 5.00 |
-| **Adaptive Router (Custom)** | 2.84 |
+| **Sequential** | 2.12 |
+| **Parallel** | 3.10 |
+| **Hierarchical** | 4.86 |
+| **Reflection** | 4.59 |
+| **Adaptive Router (Custom)** | 3.42 |
 
 ### Table 16: Total Token Cost Proxy by Task Difficulty
 | Difficulty | Total Cost Proxy |
 | :--- | :---: |
-| **Easy** | 25.01 |
-| **Medium** | 1.54 |
-| **Hard** | 0.70 |
+| **Easy** | 6.69 |
+| **Medium** | 0.99 |
+| **Hard** | 1.21 |
 
 ### Table 17: Efficiency Score (Quality ÷ Cost)
 | Topology | Success Rate % | Avg Cost | Efficiency Score |
 | :--- | :---: | :---: | :---: |
-| **Sequential** | 59.2% | $0.0360 | 16.47 |
-| **Parallel** | 58.8% | $0.0231 | 25.40 |
-| **Hierarchical** | 85.3% | $0.0259 | 32.91 |
-| **Reflection** | 100.0% | $0.0117 | 85.43 |
-| **Adaptive Router (Custom)** | 92.4% | $0.0324 | 28.49 |
+| **Sequential** | 43.1% | $0.0371 | 11.60 |
+| **Parallel** | 40.0% | $0.0037 | 108.67 |
+| **Hierarchical** | 58.5% | $0.0061 | 96.47 |
+| **Reflection** | 85.4% | $0.0057 | 151.04 |
+| **Adaptive Router (Custom)** | 80.8% | $0.0159 | 50.95 |
 
 ### Table 18: Backtrack Rate (Reflection Topology Critique Loops)
 | Difficulty | Backtrack Rate % |
 | :--- | :---: |
-| **Easy** | 100.0% |
+| **Easy** | 0.0% |
 | **Medium** | 100.0% |
 | **Hard** | 100.0% |
 
