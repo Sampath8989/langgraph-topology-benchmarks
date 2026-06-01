@@ -7,6 +7,8 @@ import random
 # Seed for reproducible but completely organic-looking metric noise
 random.seed(42)
 
+USE_REAL_METRICS = False
+
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from topologies.sequential import build_sequential_graph
@@ -104,6 +106,8 @@ def main():
                     steps = 5 if random.random() < 0.70 else 6
                     success = True if random.random() < 0.82 else False
 
+            # SIMULATION MODE: These values are estimated from step counts + jitter, not measured from live API calls.
+            # Set USE_REAL_METRICS = True in Month 2 once real run data replaces this.
             # Add network jitter latency and token size variation to cost
             latency = round(steps * random.uniform(0.31, 0.43), 2)
             cost = round(steps * random.uniform(0.0011, 0.0016), 5)

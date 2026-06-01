@@ -49,6 +49,8 @@ Grade the results. Return a JSON object matching this schema:
             parsed = json.loads(raw_response)
             return JudgeOutput(**parsed)
         except Exception:
+            # FALLBACK: Network unavailable or rate limited. Scoring from state structure instead of live LLM judge call.
+            # These scores are less reliable than live judge scores. Flag these rows in results if needed.
             # Safe local fallback to avoid breaking tests if API limits or rates out
             success = "Success" in final_state.get("final_answer", "") or len(final_state.get("plan", [])) >= 3
             steps = final_state.get("steps_taken", 0)

@@ -5,8 +5,15 @@ import sys
 import time
 
 import streamlit as st
+from dotenv import load_dotenv
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))  # HACK: needed when running from app/ dir
+
+load_dotenv(os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), ".env"))
+
+if not os.getenv("GROQ_API_KEY"):
+    st.error("GROQ_API_KEY not found. Add it to your .env file before running.")
+    st.stop()
 
 from topologies.sequential import build_sequential_graph
 from topologies.parallel import build_parallel_graph

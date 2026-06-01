@@ -4,7 +4,18 @@ from groq import Groq
 from dotenv import load_dotenv
 
 def generate_synthetic_tasks(n: int = 200) -> list:
-    load_dotenv(os.path.join(os.path.dirname(os.path.dirname(__file__)), ".env"))
+    # Tasks are generated fresh each run unless cached to data/tasks.json.
+    # For reproducibility, generated tasks are saved and reused if the file already exists.
+    base_dir = os.path.dirname(os.path.dirname(__file__))
+    tasks_json_path = os.path.join(base_dir, "data", "tasks.json")
+    if os.path.exists(tasks_json_path):
+        try:
+            with open(tasks_json_path, "r") as f:
+                return json.load(f)
+        except Exception:
+            pass
+
+    load_dotenv(os.path.join(base_dir, ".env"))
     api_key = os.environ.get("GROQ_API_KEY")
     if not api_key:
         return _generate_fallback_tasks(n)
@@ -51,6 +62,9 @@ Schema example:
     output_path = os.path.join(os.path.dirname(os.path.dirname(__file__)), "data", "synthetic_200.json")
     os.makedirs(os.path.dirname(output_path), exist_ok=True)
     with open(output_path, "w") as f:
+        json.dump(tasks, f, indent=2)
+        
+    with open(tasks_json_path, "w") as f:
         json.dump(tasks, f, indent=2)
         
     return tasks
